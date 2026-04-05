@@ -16,10 +16,23 @@ namespace MauiAppTempoAgora.Services
 
             using (HttpClient client = new HttpClient())
             {
-                HttpResponseMessage resp = await client.GetAsync(url);
-
-                if (resp.IsSuccessStatusCode)
+                try
                 {
+                    HttpResponseMessage resp = await client.GetAsync(url);
+
+                    // Cidade não encontrada (404)
+                    if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        throw new Exception("Cidade não encontrada!");
+                    }
+
+                    // Outros erros da API
+                    if (!resp.IsSuccessStatusCode)
+                    {
+                        throw new Exception("Erro ao buscar dados da API.");
+                    }
+
+                    // Se deu certo, continua normal
                     string json = await resp.Content.ReadAsStringAsync();
 
                     var rascunho = JObject.Parse(json);
@@ -40,9 +53,14 @@ namespace MauiAppTempoAgora.Services
                         visibility = (int)rascunho["visibility"],
                         sunrise = sunrise.ToString(),
                         sunset = sunset.ToString(),
-                    }; // Fecha obj do Tempo.
-                } // Fecha if se o status do servidor foi de sucesso
-            } // fecha laço using
+                    };
+                }
+                catch (HttpRequestException)
+                {
+                    // Sem internet
+                    throw new Exception("Sem conexão com a internet.");
+                }
+            }
 
             return t;
         }
